@@ -16,7 +16,7 @@
     <button @click="toggleRecording">
       {{ isRecording ? 'Stop stream' : 'Start stream' }}
     </button>
-
+    <canvas ref="visualizer"></canvas>
   </div>
 </template>
 
@@ -27,7 +27,7 @@ const isRecording = ref(false);
 const isDistortion = ref(false);
 const selectedMicrophone = ref('');
 const microphones = ref<MediaDeviceInfo[]>([]);
-
+const visualizer = ref<HTMLCanvasElement>(null)
 let audioContext: AudioContext;
 let audioStream: MediaStream | undefined;
 
@@ -67,7 +67,8 @@ async function startRecording() {
 
   if (audioStream) {
     audioContext = new AudioContext();
-    const mediaStreamSource = audioContext.createMediaStreamSource(audioStream);
+    const analyserNode = new AnalyserNode(audioContext, { fftSize: 256 })
+    const mediaStreamSource = audioContext.createMediaStreamSource(audioStream).connect(analyserNode);
 
 
     if(isDistortion.value){
