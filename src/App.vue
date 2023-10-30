@@ -21,21 +21,17 @@
 </template>
 
 <script lang="ts" setup>
-import {onUnmounted, ref, watch} from 'vue';
+import {onMounted, onUnmounted, ref, watch} from 'vue';
 
 const isRecording = ref(false);
 const isDistortion = ref(false);
 const selectedMicrophone = ref('');
 const microphones = ref<MediaDeviceInfo[]>([]);
-const visualizer = ref<HTMLCanvasElement>(null)
+const visualizer = ref<HTMLCanvasElement | null>(null)
 let audioContext: AudioContext;
 let audioStream: MediaStream | undefined;
+const analyserNode = ref<AnalyserNode | null>(null)
 
-navigator.mediaDevices.enumerateDevices().then((devices) => {
-  const audioDevices = devices.filter((device) => device.kind === 'audioinput');
-  microphones.value = audioDevices;
-  selectedMicrophone.value = audioDevices.length > 0 ? audioDevices[0].deviceId : '';
-});
 
 function makeDistortionCurve(amount: number) {
   const k = amount;
@@ -67,8 +63,8 @@ async function startRecording() {
 
   if (audioStream) {
     audioContext = new AudioContext();
-    const analyserNode = new AnalyserNode(audioContext, { fftSize: 256 })
-    const mediaStreamSource = audioContext.createMediaStreamSource(audioStream).connect(analyserNode);
+    analyserNode.value = new AnalyserNode(audioContext, { fftSize: 256 })
+    const mediaStreamSource = audioContext.createMediaStreamSource(audioStream).connect(analyserNode.value);
 
 
     if(isDistortion.value){
@@ -89,6 +85,7 @@ function stopRecording() {
     audioStream.getTracks().forEach((track) => track.stop());
     audioContext.close();
     isRecording.value = false;
+    analyserNode.value = null;
   }
 }
 
@@ -107,8 +104,41 @@ async function restart(){
     toggleRecording()
   }
 }
+function drawVisualizer() {
+  requestAnimationFrame(drawVisualizer)
+  if(analyserNode.value){
+    const bufferLength = analyserNode.value.frequencyBinCount
+    const dataArray = new Uint8Array(bufferLength)
+    analyserNode.value.getByteFrequencyData(dataArray)
+    const width = visualizer.value!.width
+    const height = visualizer.value!.height
+    const barWidth = width / bufferLength
+
+    const canvasContext = visualizer.value!.getContext('2d')
+    canvasContext!.clearRect(0, 0, width, height)
+
+    dataArray.forEach((item, index) => {
+      const y = item / 255 * height / 2
+      const x = barWidth * index
+
+      canvasContext!.fillStyle = `hsl(${y / height * 400}, 100%, 50%)`
+      canvasContext!.fillRect(x, height - y, barWidth, y)
+    })
+  }
+
+}
 
 watch([selectedMicrophone, isDistortion], restart);
+
+onMounted(()=>{
+  drawVisualizer()
+  navigator.mediaDevices.enumerateDevices().then((devices) => {
+    const audioDevices = devices.filter((device) => device.kind === 'audioinput');
+    microphones.value = audioDevices;
+    selectedMicrophone.value = audioDevices.length > 0 ? audioDevices[0].deviceId : '';
+  });
+})
+
 
 onUnmounted(() => {
   stopRecording();
