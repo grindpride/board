@@ -133,9 +133,12 @@ watch([selectedMicrophone, isDistortion], restart);
 onMounted(()=>{
   drawVisualizer()
   navigator.mediaDevices.enumerateDevices().then((devices) => {
+    console.log('devices', devices);
     const audioDevices = devices.filter((device) => device.kind === 'audioinput');
     microphones.value = audioDevices;
     selectedMicrophone.value = audioDevices.length > 0 ? audioDevices[0].deviceId : '';
+  }).catch(e =>{
+    console.error(e);
   });
 })
 
