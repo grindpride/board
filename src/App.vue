@@ -1,6 +1,6 @@
 <template>
   <div class="audio-recorder">
-    <label >
+    <label>
       Выбери микрофон:
       <select id="microphone-select" v-model="selectedMicrophone">
         <option v-for="microphone in microphones" :key="microphone.deviceId" :value="microphone.deviceId">
@@ -8,10 +8,10 @@
         </option>
       </select>
     </label>
-    <label>
-      Включить дисторшон
-      <input type="checkbox" v-model="isDistortion">
-    </label>
+<!--    <label>-->
+<!--      Включить дисторшон-->
+<!--      <input v-model="isDistortion" type="checkbox">-->
+<!--    </label>-->
 
     <button @click="toggleRecording">
       {{ isRecording ? 'Stop stream' : 'Start stream' }}
@@ -51,7 +51,14 @@ function makeDistortionCurve(amount: number) {
 
 async function getMediaStream() {
   try {
-    const constraints = {audio: {deviceId: selectedMicrophone.value}};
+    const constraints = {
+      audio: {
+        deviceId: selectedMicrophone.value,
+        autoGainControl: false,
+        echoCancellation: false,
+        noiseSuppression: false
+      }
+    };
     return await navigator.mediaDevices.getUserMedia(constraints);
   } catch (err) {
     console.error('Error getting audio stream:', err);
@@ -63,16 +70,16 @@ async function startRecording() {
 
   if (audioStream) {
     audioContext = new AudioContext();
-    analyserNode.value = new AnalyserNode(audioContext, { fftSize: 256 })
+    analyserNode.value = new AnalyserNode(audioContext, {fftSize: 256})
     const mediaStreamSource = audioContext.createMediaStreamSource(audioStream).connect(analyserNode.value);
 
 
-    if(isDistortion.value){
+    if (isDistortion.value) {
       const distortion = audioContext.createWaveShaper();
       distortion.curve = makeDistortionCurve(400);
       mediaStreamSource.connect(distortion);
       distortion.connect(audioContext.destination);
-    }else {
+    } else {
       mediaStreamSource.connect(audioContext.destination);
     }
 
@@ -97,16 +104,17 @@ function toggleRecording() {
   }
 }
 
-async function restart(){
+async function restart() {
   if (isRecording.value) {
     stopRecording();
     await new Promise((resolve) => setTimeout(resolve, 500));
     toggleRecording()
   }
 }
+
 function drawVisualizer() {
   requestAnimationFrame(drawVisualizer)
-  if(analyserNode.value){
+  if (analyserNode.value) {
     const bufferLength = analyserNode.value.frequencyBinCount
     const dataArray = new Uint8Array(bufferLength)
     analyserNode.value.getByteFrequencyData(dataArray)
@@ -130,14 +138,14 @@ function drawVisualizer() {
 
 watch([selectedMicrophone, isDistortion], restart);
 
-onMounted(()=>{
+onMounted(() => {
   drawVisualizer()
   navigator.mediaDevices.enumerateDevices().then((devices) => {
     console.log('devices', devices);
     const audioDevices = devices.filter((device) => device.kind === 'audioinput');
     microphones.value = audioDevices;
     selectedMicrophone.value = audioDevices.length > 0 ? audioDevices[0].deviceId : '';
-  }).catch(e =>{
+  }).catch(e => {
     console.error(e);
   });
 })
@@ -149,12 +157,13 @@ onUnmounted(() => {
 </script>
 
 <style>
-body{
+body {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .audio-recorder {
   display: flex;
   flex-direction: column;
