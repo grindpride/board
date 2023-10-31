@@ -1,4 +1,5 @@
-# pedalboard
+# Web Audio API experiments
+https://grindpride.github.io/board/
 
 This template should help get you started developing with Vue 3 in Vite.
 
