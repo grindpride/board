@@ -70,8 +70,9 @@ async function startRecording() {
 
   if (audioStream) {
     audioContext = new AudioContext();
-    analyserNode.value = new AnalyserNode(audioContext, {fftSize: 256})
-    const mediaStreamSource = audioContext.createMediaStreamSource(audioStream).connect(analyserNode.value);
+    // analyserNode.value = new AnalyserNode(audioContext, {fftSize: 256})
+    const mediaStreamSource = audioContext.createMediaStreamSource(audioStream)
+        // .connect(analyserNode.value);
 
 
     if (isDistortion.value) {
